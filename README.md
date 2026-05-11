@@ -69,3 +69,5 @@ For this project, two VMs will be created: one will be the server (using nginx) 
     - User: nginx
 
 ## Architecture diagram<a name="architecture-diagram"></a>
+
+![diagram](./img/architecture-diagram.png)
