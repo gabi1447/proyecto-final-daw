@@ -8,7 +8,7 @@
     
 - [Day 2](#day-2)
     1. [Postgres and PgAdmin setup](#db)
-    2. [Entity Relationship Diagram](#diagram)
+    2. [Entity Relationship Diagram](#entity-diagram)
 
 ## Day 1 <a name="day-1"></a>
 
@@ -89,5 +89,5 @@ Since we have decided to containerize our application using Docker and divide th
 
 Docker compose will help us connect PgAdmin to the PostGreSQL container, because when we specify several images under the same compose.yaml file, Docker creates internally a network, so all containers can communicate between them.
 
-## Entity Relationship Diagram
+## Entity Relationship Diagram <a name="entity-diagram"></a>
 ![db-diagram](./img/entity_relationship_model.png)
