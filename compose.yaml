@@ -27,6 +27,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+  
+  pgadmin:
+    image: dpage/pgadmin4
+
+    env_file:
+      - ./pgadmin/.env  
+    ports:
+      - "5051:80"
 
 volumes:
   postgres_data:
