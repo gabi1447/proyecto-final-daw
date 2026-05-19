@@ -1,11 +1,18 @@
 # Proyecto Final 1ºDAW
 
 # Table of contents
-1. [Data source and functionality](#data-source)
-2. [Virtual machines](#virtual-machines)
-3. [Architecture diagram](#architecture-diagram)
+- [Day 1](#day-1)
+    1. [Data source and functionality](#data-source)
+    2. [Virtual machines](#virtual-machines)
+    3. [Architecture diagram](#architecture-diagram)
+    
+- [Day 2](#day-2)
+    1. [Postgres and PgAdmin setup](#db)
+    2. [Entity Relationship Diagram](#diagram)
 
-## Data source and functionality<a name="data-source"></a>
+## Day 1 <a name="day-1"></a>
+
+## Data source and functionality <a name="data-source"></a>
 We have chosen the Ebay API as our primary 
 data source of information. We will use this API to retrieve
 information related to products based in our interests.
@@ -53,7 +60,7 @@ sudo cerbot --nginx
 
 For two-factor authentication, we will use Google Authenticator with the googleauth library in Python.
 
-## Virtual machines<a name="virtual-machines"></a>
+## Virtual machines <a name="virtual-machines"></a>
 For this project, two VMs will be created: one will be the server (using nginx) and the other will host the PostgreSQL database. Each has the following requirements:
 - VM BBDD Postgres:
     - 4 GB RAM
@@ -68,6 +75,19 @@ For this project, two VMs will be created: one will be the server (using nginx) 
     - 10.109.99.184
     - User: nginx
 
-## Architecture diagram<a name="architecture-diagram"></a>
+## Architecture diagram <a name="architecture-diagram"></a>
 
 ![diagram](./img/architecture-diagram.png)
+
+## Day 2 <a name="day-2">
+
+## Setting up Postgres and PgAdmin <a name="db"></a>
+
+For the development of this project we'll be using PostgreSQL to store data related to products, users and categories in our store and PgAdmin to establish the database connection with the purpose of running SQL scripts and administrating the database.
+
+Since we have decided to containerize our application using Docker and divide the responsibilities we will be running PgAdmin as a container and exposing the port 5432 (which is usually the one that PostgreSQL uses) so PgAdmin can establish the connection.
+
+Docker compose will help us connect PgAdmin to the PostGreSQL container, because when we specify several images under the same compose.yaml file, Docker creates internally a network, so all containers can communicate between them.
+
+## Entity Relationship Diagram
+![db-diagram](./img/entity_relationship_model.png)
