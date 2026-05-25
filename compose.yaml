@@ -13,26 +13,43 @@ services:
       - "8000"
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
+
+  cronjob:
+    build: ./cronjob
+    env_file:
+      - ./cronjob/.env
+      - ./db/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:16
 
     env_file:
-      - ./postgres/.env
+      - ./db/.env
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
     expose:
       - "5432"
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-  
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
   pgadmin:
     image: dpage/pgadmin4
 
     env_file:
-      - ./pgadmin/.env  
+      - ./db/.env
+
     ports:
       - "5051:80"
 
