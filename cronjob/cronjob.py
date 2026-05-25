@@ -1,5 +1,6 @@
 import requests
 import psycopg2
+from psycopg2.extras import execute_values
 import os
 from dotenv import load_dotenv
 
@@ -53,6 +54,11 @@ class Cronjob:
             return self._token
         else:
             return self._token
+    
+    @staticmethod
+    def write_to_log():
+        with open('/var/log/cron.log', 'a') as f:
+            f.write('Executing cronjob!\n')
 
     def get_product_data(self, product):
         url_params = {'q': product, 'limit': 5}
@@ -62,9 +68,41 @@ class Cronjob:
         response = requests.get(self.api_url, params=url_params, headers=headers)
         return response.json()
     
-    def insert(self):
-        self.db.cur.execute("INSERT INTO category (category_name) VALUES('Wii')")
+    def wipe_product_data(self):
+        sql = "TRUNCATE TABLE products RESTART IDENTITY"
+        self.db.cur.execute(sql)
+        self.db.conn.commit()
+        
+    def insert_products(self):
+        sql = """
+            INSERT INTO products (name, price, currency, image_url, item_link, category_id)
+            VALUES %s;
+        """
+        execute_values(
+            self.db.cur,
+            sql,
+            self.filter_product_data('gameboy', 1)
+        )
         self.db.conn.commit()
     
-cron_job = Cronjob(DbConnection())
-cron_job.insert()
+    def filter_product_data(self, product_to_get, category_id):
+        products = self.get_product_data(product_to_get)['itemSummaries']
+        products_to_store = []
+        for product in products:
+            product_data = (
+                 product['title'],
+                 float(product['price']['value']),
+                 product['price']['currency'],
+                 product['image']['imageUrl'],
+                 product['itemWebUrl'],
+                 category_id
+            )
+            products_to_store.append(product_data)
+        return products_to_store
+        
+def main():
+    cron_job = Cronjob(DbConnection())
+    cron_job.wipe_product_data()
+    cron_job.insert_products()
+    cron_job.write_to_log()
+main()

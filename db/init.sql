@@ -20,3 +20,6 @@ VALUES
     ('Gameboy'),
     ('Xbox 360'),
     ('Playstation 2');
+
+/* INSERT INTO products (name, price, currency, image_url, item_link, category_id)
+VALUES ('gameboy advanced', 100.50, 'EUR', 'image_url', 'item_link', 1); */
