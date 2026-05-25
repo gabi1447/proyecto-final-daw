@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 class DbConnection:
     def __init__(self):
@@ -56,9 +57,10 @@ class Cronjob:
             return self._token
     
     @staticmethod
-    def write_to_log():
+    def log_info():
         with open('/var/log/cron.log', 'a') as f:
-            f.write('Executing cronjob!\n')
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S") 
+            f.write(f'Products were restored at {timestamp}\n')
 
     def get_product_data(self, product):
         url_params = {'q': product, 'limit': 5}
@@ -104,5 +106,5 @@ def main():
     cron_job = Cronjob(DbConnection())
     cron_job.wipe_product_data()
     cron_job.insert_products()
-    cron_job.write_to_log()
+    cron_job.log_info()
 main()
