@@ -63,7 +63,7 @@ class Cronjob:
             f.write(f'Products were restored at {timestamp}\n')
 
     def get_product_data(self, product):
-        url_params = {'q': product, 'limit': 5}
+        url_params = {'q': product, 'limit': 100}
         headers = {
             'Authorization': f'Bearer {self.token}',
         }
