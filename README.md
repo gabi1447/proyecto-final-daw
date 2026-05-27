@@ -12,6 +12,8 @@
 
 - [Day 3](#day-3)
     1. [Nginx Configuration](#nginx)
+    2. [Cronjob Script](#cronjob)
+    3. [FastApi Backend](#fastapi)
 
 ## Day 1 <a name="day-1"></a>
 
@@ -169,7 +171,7 @@ server {
 }
 ```
 
-## Loading product data from the Ebay API and storing it in PostgreSQL using a Cronjob.
+## Loading product data from the Ebay API and storing it in PostgreSQL using a Cronjob. <a name="cronjob"></a>
 
 We are going to automate the process of product data retrieval and the storage of
 this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts 
@@ -362,7 +364,7 @@ def insert_products(self):
     self.db.conn.commit()
 ```
 
-## FastApi Backend Server
+## FastApi Backend Server <a name="fastapi"></a>
 
 We have consolidated in the database product data that's going to be populated 
 and used in our website, but for that like in the Ebay API we need to expose 
