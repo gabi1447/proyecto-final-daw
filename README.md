@@ -168,3 +168,13 @@ server {
     }
 }
 ```
+
+## Loading product data from the Ebay API and storing it in PostgreSQL
+
+We are going to automate the process of product data retrieval and the storage of
+this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts 
+at a specific period of time, in our case, we will specify to run a python script daily
+at midnight. We are doing this to update our catalog of products daily and not show the same
+products everyday. It's also possible that products can be acquired, making the products unavailable 
+to get. So we think a daily refresh of products is a good choice.
+
