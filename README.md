@@ -169,7 +169,7 @@ server {
 }
 ```
 
-## Loading product data from the Ebay API and storing it in PostgreSQL
+## Loading product data from the Ebay API and storing it in PostgreSQL using a Cronjob.
 
 We are going to automate the process of product data retrieval and the storage of
 this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts 
@@ -178,3 +178,59 @@ at midnight. We are doing this to update our catalog of products daily and not s
 products everyday. It's also possible that products can be acquired, making the products unavailable 
 to get. So we think a daily refresh of products is a good choice.
 
+We will have a separate container that will be reponsible of running our python script daily.
+We will achieve this by specifying how often will the script run followed by the the command
+it will run at that specific time. In our case it will run daily and it will run the script
+located at /app/cronjob.py. This path is where the script resides INSIDE the container. This is declared
+previously in the Dockerfile:
+
+```bash
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    build-essential \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY cronjob /etc/cron.d/cronjob
+
+RUN chmod 0644 /etc/cron.d/cronjob
+
+RUN touch /var/log/cron.log
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+COPY cronjob.py .
+COPY entrypoint.sh .
+
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
+```
+
+With WORKDIR we can establish the current working directory
+and which will be /app in this case and with COPY as said previously
+we can copy files that are located on the machine that's running 
+docker to the container itself.
+
+### Script responsible for data retrieval from the Ebay API and storage in the PostgreSQL database.
+
+Since we are using PostgreSQL as our database we will be using the library **psycopg2** to establish 
+a connection programatically from Python to the database. To retrieve data from the Ebay API we will be using
+the **requests** library. But first, to be able to consume data from the Ebay API we need "credentials" or secrets
+to have access to it. Without an api key or this secrets we won't be able to retrieve any kind of data from Ebay
+at least from their API. This is done this way to implement rate limiting in APIs and limit the usage of it to users.
+
+In Ebay they use a methodology to provide authorization called OAuth, this mechanism works by communicating to an 
+authorization server with the "credentials" generated previously and then this server granting a token with limited time usage to communicate
+with the Ebay API. This token is the one that will be passed in the authorization header of each http call to be able to perform data
+retrieval successfully. Tokens have limited time usage for security measures in case a token gets stolen, damages will only be temporary.
+
+In our cronjob.py script we have two classes, **Dbconnection** that will be responsible of establishing a connection to the PostgreSQL database
+programmatically and then **Cronjob** that will be responsible.
