@@ -1,4 +1,4 @@
-# Proyecto Final 1ºDAW
+# Final Project 1ºDAW
 
 # Table of contents
 - [Day 1](#day-1)
@@ -9,6 +9,9 @@
 - [Day 2](#day-2)
     1. [Postgres and PgAdmin setup](#db)
     2. [Entity Relationship Diagram](#entity-diagram)
+
+- [Day 3](#day-3)
+    1. [Nginx Configuration](#nginx)
 
 ## Day 1 <a name="day-1"></a>
 
@@ -91,3 +94,77 @@ Docker compose will help us connect PgAdmin to the PostGreSQL container, because
 
 ## Entity Relationship Diagram <a name="entity-diagram"></a>
 ![db-diagram](./img/entity_relationship_model.png)
+
+## Day 3 <a name="day-3">
+
+## Setting up Nginx Web Server <a name="nginx"></a>
+
+Nginx will be the only container that will have port mapping in the main machine, since
+it will act as the entrypoing of the application and it will be responsible for serving
+the static files of our website. The api calls to the FastApi backend server will be done
+hitting the same url but adding /api at the end of the URL. This way Nginx will redirect the traffic
+to the fastapi container, so it can handle the api call and generate a response for the frontend to consume.
+
+We have containerized our application, so we won't need to install Nginx
+in a machine with a package manager. Instead we have written a Dockerfile
+file in which we will specify:
+
+    - The base image will be using for using Nginx
+    - nginx.conf file
+    - the static files that nginx will serve when a client makes a call to the url
+    on port 80 since at this very moment we have not implemented https and we won't 
+    be serving any content on port 443.
+
+### Dockerfile 
+
+```bash
+# This image will be pulled from Docker Hub
+# and already has Nginx installed
+FROM nginx:stable-alpine3.23
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY static-site/ /usr/share/nginx/html/
+```
+
+With the Dockerfile that is shown above we will pull the Nginx image from 
+Docker Hub(Repository of images) and having this image as our base, we will add
+the necessary files to configure it.
+
+With the **COPY** keyword inside Dockerfile we can copy content from our local file 
+system to the container file system.
+
+### Usage of nginx.conf
+
+In this file we need to specify the content nginx is going to serve when the client
+makes http calls on port 80 to the server serving Nginx. Since nginx is running on a container
+we need to map a port on the machine that is going to run Docker to the container. We can achieve this
+by declaring it on a docker-compose.yaml file. 
+
+Additionaly since Nginx can also work as a proxy we can declare redirections based
+on the path of the URL. For example: Now we have added a redirection to the fastapi container which will take care
+of handling api calls made from the frontend. We could also make a redirection to the container running pgadmin
+everytime the client hits the /admin path.
+
+```bash
+server {
+    listen 80;
+
+    # This is where our static files are stored
+    # In the nginx container
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # This is done to redirect the api calls
+    # made by the client to the fastapi container
+    # running the backend server
+    location /api {
+	proxy_pass http://fastapi:8000;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
