@@ -232,5 +232,184 @@ authorization server with the "credentials" generated previously and then this s
 with the Ebay API. This token is the one that will be passed in the authorization header of each http call to be able to perform data
 retrieval successfully. Tokens have limited time usage for security measures in case a token gets stolen, damages will only be temporary.
 
-In our cronjob.py script we have two classes, **Dbconnection** that will be responsible of establishing a connection to the PostgreSQL database
+In our cronjob.py script we have two classes, **DbConnection** that will be responsible of establishing a connection to the PostgreSQL database
 programmatically and then **Cronjob** that will be responsible.
+
+For security measures and avoid commiting sensitive data to to GitHub, we'll be using 
+environment variables. We'll define environment variables in our local machine and then 
+they will loaded to the containers that may need them with docker compose. This is done 
+with the standard **os** library of Python.
+
+#### DbConnection:
+
+In this class we load the necessary environment variables
+to connect to the postgres database container. We are using docker compose to define
+all the containers that will be part of our architecture. The advantage of doing this 
+is that we can run our whole application and stop it with just two commands. Another advantage
+of using Docker compose is that the containers that we define on it can communicate easly
+between them since they belong to the same network, that's why when we establish the connection
+to the database with psycopg2.connect we initialize the host argument of the method with "postgres"
+because the cronjob container and the postgres container are in the same network.
+
+```python
+class DbConnection:
+    def __init__(self):
+        load_dotenv()
+        self.user = os.getenv("POSTGRES_USER")
+        self.password = os.getenv("POSTGRES_PASSWORD")
+        self.db = os.getenv("POSTGRES_DB")
+        self.conn = psycopg2.connect(
+            host="postgres",
+            port="5432",
+            dbname=self.db,
+            user=self.user,
+            password=self.password)
+        self.cur = self.conn.cursor()
+```
+
+#### Cronjob
+
+As we have mentioned before, the Cronjob class will be responsible for retrieving product data
+from the Ebay Api and consolidating the data in the PostgreSQL database. For accomplishing this we have
+broken our goal in several steps:
+
+    - Getting the token from the Ebay authorization server to communicate with the API:
+
+```python
+@property
+def token(self):
+    if self._token is None:
+        payload = {
+            "grant_type": "client_credentials",
+            "scope": "https://api.ebay.com/oauth/api_scope"
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        response = requests.post(self.token_url, 
+                                auth=(self.client_id, self.client_secret), 
+                                data=payload, 
+                                headers=headers)
+        self._token = response.json()['access_token']
+        return self._token
+    else:
+        return self._token
+```
+
+    - Using the **requests** library on python to make API calls with Ebay:
+
+With the available endpoints that ebay expose, we are able to search products
+and limit the amount of product details that we want to collect using the 'q' and 'limit'
+url params. As we have mention before we will access the token property and assigned it 
+to the 'Authorization' header in each http call to successfully communicate with the API.
+
+```python
+def get_product_data(self, product):
+    url_params = {'q': product, 'limit': 100}
+    headers = {
+        'Authorization': f'Bearer {self.token}',
+    }
+    response = requests.get(self.api_url, params=url_params, headers=headers)
+    return response.json()
+```
+
+    - Filter out data that is relevant for our application
+
+This endpoint in particular returns several fields per product that are not relevant or useful
+for our application, that's why we will iterate over every product data returned by the endpoint
+and later filter out relevant data and store it in the PostgreSQL database.
+
+For that we will use 2 functions, one for filtering out the data and another one for consolidating
+products data in the database:
+
+Filtering out data from response:
+
+```python
+def filter_product_data(self, product_to_get, category_id):
+    products = self.get_product_data(product_to_get)['itemSummaries']
+    products_to_store = []
+    for product in products:
+        product_data = (
+                product['title'],
+                float(product['price']['value']),
+                product['price']['currency'],
+                product['image']['imageUrl'],
+                product['itemWebUrl'],
+                category_id
+        )
+        products_to_store.append(product_data)
+    return products_to_store
+```
+
+Consolidating data in the database:
+
+This is still customizable and open to changes, since right now we are just
+retrieving data related to the category 'gameboy', but we could modify this functions
+to retrieve products related to other categories to make our application more interesting.
+
+```python
+def insert_products(self):
+    sql = """
+        INSERT INTO products (name, price, currency, image_url, item_link, category_id)
+        VALUES %s;
+    """
+    execute_values(
+        self.db.cur,
+        sql,
+        self.filter_product_data('gameboy', 1)
+    )
+    self.db.conn.commit()
+```
+
+## FastApi Backend Server
+
+We have consolidated in the database product data that's going to be populated 
+and used in our website, but for that like in the Ebay API we need to expose 
+**endpoints** that the frontend will call to retrieve data that will then be used 
+in our website in the form of components or product cards. For example if one of our
+endpoints returns:
+
+```json
+{
+    "product_name": "Gameboy",
+    "price": 200,
+    "currency": "USD",
+    "item_link": "https://example-item.com"
+}
+```
+
+We could use this information to then render a product card with this data.
+
+The main purpose of the FastApi Backend Server is to act as a bridge between the frontend
+client and the PostgreSQL database. We will expose an endpoint in our backend server that will allow our
+frontend to call it by passing a category id in specific and a page and size url params that will later let
+us paginate the products in our frontend.
+
+This is primarely the main endpoint that our frontend client will call to retrieve data from our database
+to consume it. 
+
+```python
+@app.get("/api/products/{category_id}")
+async def products(
+    category_id: int,
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+):
+    offset = (page - 1) * size
+    
+    sql = """
+        SELECT name, price, currency, image_url, item_link
+        FROM products
+        WHERE category_id = %s
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    """
+    db.cur.execute(sql, (category_id, size, offset))
+    
+    rows = db.cur.fetchall()
+    return rows
+```
+
+Once we have a response from the API on the client the responsibility of what to do 
+with that data(render it however we see fit), resides in the client code.
