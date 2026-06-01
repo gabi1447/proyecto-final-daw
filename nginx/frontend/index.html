@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proyecto Final DAW</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <div id="landscape">
+      <div id="cover">
+        <img
+          src="./img/gameboy-pixelated-transparent-cropped.png"
+          alt="gameboy advance"
+          id="cover-image"
+        />
+        <div id="cover-title">
+          <h1 id="title">
+            <span id="red">R</span>
+            etro <br />
+            <span id="green">G</span>
+            aming <br />
+            <span id="blue">B</span>
+            aby
+          </h1>
+          <p id="description">
+            All your childhood favourite consoles in one place!
+          </p>
+          <br />
+          <a id="button-redirection" href="#content">Explore more!</a>
+        </div>
+      </div>
+    </div>
+    <div id="content">
+      <a href="#landscape">Jump to landscape</a>
+      <div id="products-content">
+        <div id="categories">
+          <button class="category-button" id="1">Gameboy</button>
+          <button class="category-button" id="2">XBOX 360</button>
+          <button class="category-button" id="3">Playstation 2</button>
+        </div>
+        <div id="pagination"></div>
+        <div id="arrows">
+          <button id="arrowLeft"><</button>
+          <p id="pageNumber"></p>
+          <button id="arrowRight">></button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

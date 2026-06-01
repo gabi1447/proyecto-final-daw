@@ -1,0 +1,90 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  scroll-behavior: smooth;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@font-face {
+  font-family: "retro";
+  src: url(./fonts/Retro\ Gaming.woff2);
+  font-weight: normal;
+  font-style: normal;
+}
+
+#landscape,
+#content {
+  background-color: #ffe6ff;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#cover {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5rem;
+}
+
+#title {
+  font-family:
+    "retro", "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+  font-size: 5rem;
+}
+
+#red {
+  color: red;
+}
+
+#green {
+  color: green;
+}
+
+#blue {
+  color: blue;
+}
+
+#red,
+#green,
+#blue {
+  margin-right: -1.75rem;
+  padding: 0;
+}
+
+#description {
+  font-family: monospace;
+  font-size: 2rem;
+  width: 20ch;
+  font-weight: 100;
+}
+
+#button-redirection {
+  background-color: black;
+  color: white;
+  font-family: "retro";
+  font-size: 1.25rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+/* Styles related to the product content */
+#products-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#arrows {
+  display: flex;
+}
