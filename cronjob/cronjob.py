@@ -20,10 +20,19 @@ class DbConnection:
         self.cur = self.conn.cursor()
 
 class Cronjob:
-    products_to_retrieve = [
+    # To-Do: Recover this data from the DB
+    categories = [
         {
-            "product": "gameboy advance",
-            "db_table_name": "gameboy"
+            "id": 1,
+            "name": "gameboy",
+        },
+        {
+            "id": 2,
+            "name": "xbox 360",
+        },
+        {
+            "id": 3,
+            "name": "playstation 2",
         }
     ]
     
@@ -80,17 +89,22 @@ class Cronjob:
             INSERT INTO products (name, price, currency, image_url, item_link, category_id)
             VALUES %s;
         """
-        execute_values(
-            self.db.cur,
-            sql,
-            self.filter_product_data('gameboy', 1)
-        )
-        self.db.conn.commit()
+        
+        # Populating data of each category in the DB
+        for category in self.categories:
+            execute_values(
+                self.db.cur,
+                sql,
+                self.filter_product_data(category['name'], category['id'])
+            )
+            self.db.conn.commit()
+        self.db.conn.close()
     
-    def filter_product_data(self, product_to_get, category_id):
+    def filter_product_data(self, product_to_get: str, category_id: int) -> list[tuple]:
         products = self.get_product_data(product_to_get)['itemSummaries']
         products_to_store = []
         for product in products:
+            # To-do: Turn this into a Class and return list[Product]
             product_data = (
                  product['title'],
                  float(product['price']['value']),
