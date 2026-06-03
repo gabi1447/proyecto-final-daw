@@ -141,3 +141,16 @@ html {
 #xbox-grey {
   color: #9d9fa2;
 }
+
+#product-image {
+  max-width: 150px;
+  max-height: 150px;
+}
+
+#pagination {
+  display: grid;
+  width: 80%;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin: 2rem;
+}
