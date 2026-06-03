@@ -12,7 +12,21 @@ html {
 
 @font-face {
   font-family: "retro";
-  src: url(./fonts/Retro\ Gaming.woff2);
+  src: url(./fonts/Retro-Gaming.woff2);
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "xbox";
+  src: url(./fonts/xbox.woff2);
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "playstation";
+  src: url(./fonts/playstation.woff2);
   font-weight: normal;
   font-style: normal;
 }
@@ -87,4 +101,43 @@ html {
 
 #arrows {
   display: flex;
+}
+
+/* Category buttons */
+#categories {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.category-button {
+  padding: 1rem;
+  border-radius: 0.25rem;
+  border: 1px black solid;
+  cursor: pointer;
+}
+
+.gameboyButton {
+  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+  font-style: italic;
+  font-weight: bold;
+  color: blue;
+}
+
+.xboxButton {
+  font-family: "xbox", "monospace";
+}
+
+.playstationButton {
+  font-family: "playstation", "monospace";
+  color: white;
+  background-color: black;
+}
+
+#xbox-green {
+  color: #92c83e;
+}
+
+#xbox-grey {
+  color: #9d9fa2;
 }

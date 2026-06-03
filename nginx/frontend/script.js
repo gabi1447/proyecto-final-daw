@@ -35,21 +35,22 @@ function updatePaginationInfo() {
 function loadEventListeners() {
   for (let category of categories) {
     category.addEventListener("click", () => {
+      currentPageSelected = category.id;
+      currentPageNumber = 1;
       fetchProductData(category.id);
-      loadPaginationEventListeners(category.id);
       enable_disable_button();
       updatePaginationInfo();
     });
   }
 }
 
-function loadPaginationEventListeners(category_id) {
+function loadPaginationEventListeners() {
   arrowLeft.addEventListener("click", () => {
     if (currentPageNumber === 1) {
       return;
     }
     currentPageNumber -= currentPageNumber > 1 ? 1 : 0;
-    fetchProductData(category_id, currentPageNumber);
+    fetchProductData(currentPageSelected, currentPageNumber);
     enable_disable_button();
     updatePaginationInfo();
   });
@@ -58,10 +59,13 @@ function loadPaginationEventListeners(category_id) {
       return;
     }
     currentPageNumber += currentPageNumber < 10 ? 1 : 0;
-    fetchProductData(category_id, currentPageNumber);
+    fetchProductData(currentPageSelected, currentPageNumber);
     enable_disable_button();
     updatePaginationInfo();
   });
 }
 
 loadEventListeners();
+loadPaginationEventListeners();
+fetchProductData(currentPageSelected);
+updatePaginationInfo();
