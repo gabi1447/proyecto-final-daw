@@ -15,6 +15,8 @@
     2. [Cronjob Script](#cronjob)
     3. [FastApi Backend](#fastapi)
 
+- [Day 4](#day-4)
+
 ## Day 1 <a name="day-1"></a>
 
 ## Data source and functionality <a name="data-source"></a>
@@ -415,3 +417,71 @@ async def products(
 
 Once we have a response from the API on the client the responsibility of what to do 
 with that data(render it however we see fit), resides in the client code.
+
+## Day 4 <a name="day-4"></a>
+
+Landing page:
+
+![landing-page](./img/landing-page.png)
+
+We have retrieved product data from the Ebay API, we have consolidated the data in a PostgreSQL database
+and we have exposed endpoints from a Backend Server (FastApi) that will be consumed from the Frontend using
+Vanilla JavaScript.
+
+Once again, since we are using Docker and our Nginx container can communicate with the FastApi container thanks
+to docker compose. With Vanilla JavaScript we'll be making use of event listeners and the fetch function, to trigger
+actions and fetching product data from the API that at the same time will query the database and retrieve the requested data.
+
+Endpoint exposed in the Backend:
+
+```python
+@app.get("/api/products/{category_id}")
+async def products(
+    category_id: int,
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+):
+    offset = (page - 1) * size
+    
+    sql = """
+        SELECT name, price, currency, image_url, item_link
+        FROM products
+        WHERE category_id = %s
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    """
+    db.cur.execute(sql, (category_id, size, offset))
+    
+    rows = db.cur.fetchall()
+    return rows
+```
+
+We will make a GET HTTP call to the Backend the following way:
+
+```js
+function fetchProductData(category_id, page = 1, size = 10) {
+  fetch(
+    `http://localhost:8080/api/products/${category_id}?page=${page}&size=${size}`,
+  )
+    .then((response) => response.json())
+    .then((data) => populateProducts(data))
+    .catch((error) => console.error("Error fetching products:", error));
+}
+```
+By using a category_id and url paramaters (page, size) we can make our backend return 
+different products. Now we are just displaying 3 categories on the products page, so 
+depending on wich category we click on, an event will be triggered and a different id will be passed
+to make the HTTP call.
+
+Products page:
+
+![products-page](./img/products-page.png)
+
+### Pagination
+
+When we click on the next or previous button to move to a different page, we will 
+trigger an event that will make an API call with the page we want to go to. e. g. If
+we are currently on the page 1 and we want to go to the next one on the Gameboy category,
+we will use the id of the category and the page number we want to go to to make the API call
+and retrieve new projects. Pages will have a size of 10, so if we are on page 1 or in page 10,
+we won't be able to go back or go further, it won't be allowed.
