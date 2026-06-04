@@ -115,6 +115,7 @@ html {
   border-radius: 0.25rem;
   border: 1px black solid;
   cursor: pointer;
+  font-size: 1.5rem;
 }
 
 .gameboyButton {
@@ -145,6 +146,7 @@ html {
 #product-image {
   max-width: 150px;
   max-height: 150px;
+  border-radius: 0.5rem;
 }
 
 #pagination {
@@ -153,4 +155,31 @@ html {
   grid-template-columns: repeat(5, 1fr);
   gap: 20px;
   margin: 2rem;
+}
+
+#pageNumber {
+  margin: 0.5rem;
+  font-family: "monospace";
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#buy-button {
+  font-family: "retro";
+  background-color: black;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+}
+
+#arrowLeft, #arrowRight {
+  font-family: "retro";
+  padding: 0 0.5rem;
+  cursor: pointer;
 }
