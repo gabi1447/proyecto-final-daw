@@ -15,13 +15,13 @@ function createProductCard(productData) {
             <img src="${productData.image_url}" id="product-image" alt="${productData.name}">
             <h3>${productData.name}</h3>
             <p>$${productData.price}</p>
-            <a href="${productData.item_link}" target="_blank">Buy</a>
+            <a href="${productData.item_link}" id="buy-button" target="_blank">Buy</a>
         </div>
     `;
 }
 
 function populateProducts(productsData) {
-  for (productData of productsData) {
+  for (let productData of productsData) {
     productsContainer.innerHTML += createProductCard(productData);
   }
 }
