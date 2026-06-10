@@ -28,7 +28,7 @@ function populateProducts(productsData) {
 
 function fetchProductData(category_id, page = 1, size = 10) {
   fetch(
-    `http://82.223.117.252:80/api/products/${category_id}?page=${page}&size=${size}`,
+    `http://proyecto-final-daw-gnv.es/api/products/${category_id}?page=${page}&size=${size}`,
   )
     .then((response) => response.json())
     .then((data) => populateProducts(data))
