@@ -1,5 +1,7 @@
 # Final Project 1ºDAW
 
+You can check out the project [here](http://proyecto-final-daw-gnv.es).
+
 # Table of contents
 
 - [Application Architecture](#architecture)
@@ -22,6 +24,20 @@
 ## Architecture <a name="architecture"></a>
 
 ![diagram](./img/architecture-diagram.png)
+
+### Application flow
+
+1. The user opens `proyecto-final-daw-gnv.es` in the browser, and DNS points the domain to the server.
+2. The server receives the HTTP request on port `80`, which is handled by the Nginx Docker container.
+3. Nginx serves the static frontend files: HTML, CSS, JavaScript, images, and fonts.
+4. The frontend loads the Retro Gaming Baby page and shows the available product categories.
+5. When the user selects a category or changes page, JavaScript calls the API using `/api/products/{category_id}?page={page}&size=10`.
+6. Nginx detects the `/api` path and proxies the request to the FastApi container.
+7. FastApi receives the request, connects to PostgreSQL, and queries the products for the selected category with pagination.
+8. PostgreSQL returns the product data: name, price, currency, image URL, and Ebay item link.
+9. FastApi sends the data back as JSON, and the frontend renders the product cards in the browser.
+10. The cronjob container refreshes the database by requesting products from the Ebay API and storing the updated data in PostgreSQL.
+11. PgAdmin is available through `/admin/` to inspect and manage the PostgreSQL database.
 
 ## Day 1 <a name="day-1"></a>
 
@@ -73,23 +89,6 @@ sudo cerbot --nginx
 ```
 
 For two-factor authentication, we will use Google Authenticator with the googleauth library in Python.
-
-## Virtual machines <a name="virtual-machines"></a>
-
-For this project, two VMs will be created: one will be the server (using nginx) and the other will host the PostgreSQL database. Each has the following requirements:
-
-- VM BBDD Postgres:
-  - 4 GB RAM
-  - 50 GB Virtual disk
-  - Bridge adapter
-  - 10.109.99.46
-  - User: postgres
-- VM Servidor:
-  - 4 GB RAM
-  - 50 GB Virtual disk
-  - Bridge adapter
-  - 10.109.99.184
-  - User: nginx
 
 ## Day 2 <a name="day-2">
 
