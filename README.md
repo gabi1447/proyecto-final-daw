@@ -1,31 +1,38 @@
 # Final Project 1ºDAW
 
 # Table of contents
+
+- [Application Architecture](#architecture)
+
 - [Day 1](#day-1)
-    1. [Data source and functionality](#data-source)
-    2. [Virtual machines](#virtual-machines)
-    3. [Architecture diagram](#architecture-diagram)
-    
+  1. [Data source and functionality](#data-source)
+  2. [Virtual machines](#virtual-machines)
+  3. [Architecture diagram](#architecture-diagram)
 - [Day 2](#day-2)
-    1. [Postgres and PgAdmin setup](#db)
-    2. [Entity Relationship Diagram](#entity-diagram)
+  1. [Postgres and PgAdmin setup](#db)
+  2. [Entity Relationship Diagram](#entity-diagram)
 
 - [Day 3](#day-3)
-    1. [Nginx Configuration](#nginx)
-    2. [Cronjob Script](#cronjob)
-    3. [FastApi Backend](#fastapi)
+  1. [Nginx Configuration](#nginx)
+  2. [Cronjob Script](#cronjob)
+  3. [FastApi Backend](#fastapi)
 
 - [Day 4](#day-4)
+
+## Architecture <a name="architecture"></a>
+
+![diagram](./img/architecture-diagram.png)
 
 ## Day 1 <a name="day-1"></a>
 
 ## Data source and functionality <a name="data-source"></a>
-We have chosen the Ebay API as our primary 
+
+We have chosen the Ebay API as our primary
 data source of information. We will use this API to retrieve
 information related to products based in our interests.
 
 Our plan is to use a lightweight Python Backend Framework, such as
-Flask or FastApi and the library requests. 
+Flask or FastApi and the library requests.
 
 We will use FastApi/Flask to declare endpoints that we will call from the Frontend to populate the database
 and additionally generate an html page with the products information consolidated in the database.
@@ -34,14 +41,14 @@ The library requests will be used directly from the backend to retrieve the info
 to the selected products. We will then parse the JSON response and insert product info in the database.
 
 Since we have decided to use an API to retrieve product data, we will be using the **requests** library in Python
-for this purpose. At first we'll need to know how the API we want to hit is built (endpoints we can attack). If the 
+for this purpose. At first we'll need to know how the API we want to hit is built (endpoints we can attack). If the
 API is public this is usually documented in detail.
 
 Once we know at a high level the endpoints we need to attack and the http methods that will be used per endpoint (in this
-case we'll be using the GET http method primarily since our main goal is to retrieve data, not to populate any) we can 
+case we'll be using the GET http method primarily since our main goal is to retrieve data, not to populate any) we can
 use the requests library to perform this actions.
 
-A very basic example from the [docs](https://requests.readthedocs.io/en/latest/) to retrieve data from 
+A very basic example from the [docs](https://requests.readthedocs.io/en/latest/) to retrieve data from
 an API would be this:
 
 ```python
@@ -55,11 +62,11 @@ r = requests.get(url)
 r.json()
 ```
 
-The moment we have parsed the data recovered from the API we can make a connection with 
+The moment we have parsed the data recovered from the API we can make a connection with
 the Postgres database with the library **psycopg2** and make insertions with the data we have recovered
 from the API.
 
-To configure a secure HTTPS server, we will first install nginx  because it uses little memory and is an open-source web server. Then, we install cerbot being an automatic and free toll to enable HTTPS on websites using SSL/TLS certificates with the following command:
+To configure a secure HTTPS server, we will first install nginx because it uses little memory and is an open-source web server. Then, we install cerbot being an automatic and free toll to enable HTTPS on websites using SSL/TLS certificates with the following command:
 
 ```python
 sudo cerbot --nginx
@@ -68,23 +75,21 @@ sudo cerbot --nginx
 For two-factor authentication, we will use Google Authenticator with the googleauth library in Python.
 
 ## Virtual machines <a name="virtual-machines"></a>
+
 For this project, two VMs will be created: one will be the server (using nginx) and the other will host the PostgreSQL database. Each has the following requirements:
+
 - VM BBDD Postgres:
-    - 4 GB RAM
-    - 50 GB Virtual disk
-    - Bridge adapter
-    - 10.109.99.46
-    - User: postgres
+  - 4 GB RAM
+  - 50 GB Virtual disk
+  - Bridge adapter
+  - 10.109.99.46
+  - User: postgres
 - VM Servidor:
-    - 4 GB RAM
-    - 50 GB Virtual disk
-    - Bridge adapter
-    - 10.109.99.184
-    - User: nginx
-
-## Architecture diagram <a name="architecture-diagram"></a>
-
-![diagram](./img/architecture-diagram.png)
+  - 4 GB RAM
+  - 50 GB Virtual disk
+  - Bridge adapter
+  - 10.109.99.184
+  - User: nginx
 
 ## Day 2 <a name="day-2">
 
@@ -97,6 +102,7 @@ Since we have decided to containerize our application using Docker and divide th
 Docker compose will help us connect PgAdmin to the PostGreSQL container, because when we specify several images under the same compose.yaml file, Docker creates internally a network, so all containers can communicate between them.
 
 ## Entity Relationship Diagram <a name="entity-diagram"></a>
+
 ![db-diagram](./img/entity_relationship_model.png)
 
 ## Day 3 <a name="day-3">
@@ -116,10 +122,10 @@ file in which we will specify:
     - The base image will be using for using Nginx
     - nginx.conf file
     - the static files that nginx will serve when a client makes a call to the url
-    on port 80 since at this very moment we have not implemented https and we won't 
+    on port 80 since at this very moment we have not implemented https and we won't
     be serving any content on port 443.
 
-### Dockerfile 
+### Dockerfile
 
 ```bash
 # This image will be pulled from Docker Hub
@@ -130,11 +136,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY static-site/ /usr/share/nginx/html/
 ```
 
-With the Dockerfile that is shown above we will pull the Nginx image from 
+With the Dockerfile that is shown above we will pull the Nginx image from
 Docker Hub(Repository of images) and having this image as our base, we will add
 the necessary files to configure it.
 
-With the **COPY** keyword inside Dockerfile we can copy content from our local file 
+With the **COPY** keyword inside Dockerfile we can copy content from our local file
 system to the container file system.
 
 ### Usage of nginx.conf
@@ -142,7 +148,7 @@ system to the container file system.
 In this file we need to specify the content nginx is going to serve when the client
 makes http calls on port 80 to the server serving Nginx. Since nginx is running on a container
 we need to map a port on the machine that is going to run Docker to the container. We can achieve this
-by declaring it on a docker-compose.yaml file. 
+by declaring it on a docker-compose.yaml file.
 
 Additionaly since Nginx can also work as a proxy we can declare redirections based
 on the path of the URL. For example: Now we have added a redirection to the fastapi container which will take care
@@ -176,10 +182,10 @@ server {
 ## Loading product data from the Ebay API and storing it in PostgreSQL using a Cronjob. <a name="cronjob"></a>
 
 We are going to automate the process of product data retrieval and the storage of
-this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts 
+this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts
 at a specific period of time, in our case, we will specify to run a python script daily
 at midnight. We are doing this to update our catalog of products daily and not show the same
-products everyday. It's also possible that products can be acquired, making the products unavailable 
+products everyday. It's also possible that products can be acquired, making the products unavailable
 to get. So we think a daily refresh of products is a good choice.
 
 We will have a separate container that will be reponsible of running our python script daily.
@@ -220,18 +226,18 @@ CMD ["/app/entrypoint.sh"]
 
 With WORKDIR we can establish the current working directory
 and which will be /app in this case and with COPY as said previously
-we can copy files that are located on the machine that's running 
+we can copy files that are located on the machine that's running
 docker to the container itself.
 
 ### Script responsible for data retrieval from the Ebay API and storage in the PostgreSQL database.
 
-Since we are using PostgreSQL as our database we will be using the library **psycopg2** to establish 
+Since we are using PostgreSQL as our database we will be using the library **psycopg2** to establish
 a connection programatically from Python to the database. To retrieve data from the Ebay API we will be using
 the **requests** library. But first, to be able to consume data from the Ebay API we need "credentials" or secrets
 to have access to it. Without an api key or this secrets we won't be able to retrieve any kind of data from Ebay
 at least from their API. This is done this way to implement rate limiting in APIs and limit the usage of it to users.
 
-In Ebay they use a methodology to provide authorization called OAuth, this mechanism works by communicating to an 
+In Ebay they use a methodology to provide authorization called OAuth, this mechanism works by communicating to an
 authorization server with the "credentials" generated previously and then this server granting a token with limited time usage to communicate
 with the Ebay API. This token is the one that will be passed in the authorization header of each http call to be able to perform data
 retrieval successfully. Tokens have limited time usage for security measures in case a token gets stolen, damages will only be temporary.
@@ -239,16 +245,16 @@ retrieval successfully. Tokens have limited time usage for security measures in 
 In our cronjob.py script we have two classes, **DbConnection** that will be responsible of establishing a connection to the PostgreSQL database
 programmatically and then **Cronjob** that will be responsible.
 
-For security measures and avoid commiting sensitive data to to GitHub, we'll be using 
-environment variables. We'll define environment variables in our local machine and then 
-they will loaded to the containers that may need them with docker compose. This is done 
+For security measures and avoid commiting sensitive data to to GitHub, we'll be using
+environment variables. We'll define environment variables in our local machine and then
+they will loaded to the containers that may need them with docker compose. This is done
 with the standard **os** library of Python.
 
 #### DbConnection:
 
 In this class we load the necessary environment variables
 to connect to the postgres database container. We are using docker compose to define
-all the containers that will be part of our architecture. The advantage of doing this 
+all the containers that will be part of our architecture. The advantage of doing this
 is that we can run our whole application and stop it with just two commands. Another advantage
 of using Docker compose is that the containers that we define on it can communicate easly
 between them since they belong to the same network, that's why when we establish the connection
@@ -290,10 +296,10 @@ def token(self):
         headers = {
             "Content-Type": "application/x-www-form-urlencoded"
         }
-        
-        response = requests.post(self.token_url, 
-                                auth=(self.client_id, self.client_secret), 
-                                data=payload, 
+
+        response = requests.post(self.token_url,
+                                auth=(self.client_id, self.client_secret),
+                                data=payload,
                                 headers=headers)
         self._token = response.json()['access_token']
         return self._token
@@ -305,7 +311,7 @@ def token(self):
 
 With the available endpoints that ebay expose, we are able to search products
 and limit the amount of product details that we want to collect using the 'q' and 'limit'
-url params. As we have mention before we will access the token property and assigned it 
+url params. As we have mention before we will access the token property and assigned it
 to the 'Authorization' header in each http call to successfully communicate with the API.
 
 ```python
@@ -368,18 +374,18 @@ def insert_products(self):
 
 ## FastApi Backend Server <a name="fastapi"></a>
 
-We have consolidated in the database product data that's going to be populated 
-and used in our website, but for that like in the Ebay API we need to expose 
-**endpoints** that the frontend will call to retrieve data that will then be used 
+We have consolidated in the database product data that's going to be populated
+and used in our website, but for that like in the Ebay API we need to expose
+**endpoints** that the frontend will call to retrieve data that will then be used
 in our website in the form of components or product cards. For example if one of our
 endpoints returns:
 
 ```json
 {
-    "product_name": "Gameboy",
-    "price": 200,
-    "currency": "USD",
-    "item_link": "https://example-item.com"
+  "product_name": "Gameboy",
+  "price": 200,
+  "currency": "USD",
+  "item_link": "https://example-item.com"
 }
 ```
 
@@ -391,7 +397,7 @@ frontend to call it by passing a category id in specific and a page and size url
 us paginate the products in our frontend.
 
 This is primarely the main endpoint that our frontend client will call to retrieve data from our database
-to consume it. 
+to consume it.
 
 ```python
 @app.get("/api/products/{category_id}")
@@ -401,7 +407,7 @@ async def products(
     size: int = Query(default=10, ge=1, le=100),
 ):
     offset = (page - 1) * size
-    
+
     sql = """
         SELECT name, price, currency, image_url, item_link
         FROM products
@@ -410,12 +416,12 @@ async def products(
         LIMIT %s OFFSET %s
     """
     db.cur.execute(sql, (category_id, size, offset))
-    
+
     rows = db.cur.fetchall()
     return rows
 ```
 
-Once we have a response from the API on the client the responsibility of what to do 
+Once we have a response from the API on the client the responsibility of what to do
 with that data(render it however we see fit), resides in the client code.
 
 ## Day 4 <a name="day-4"></a>
@@ -442,7 +448,7 @@ async def products(
     size: int = Query(default=10, ge=1, le=100),
 ):
     offset = (page - 1) * size
-    
+
     sql = """
         SELECT name, price, currency, image_url, item_link
         FROM products
@@ -451,7 +457,7 @@ async def products(
         LIMIT %s OFFSET %s
     """
     db.cur.execute(sql, (category_id, size, offset))
-    
+
     rows = db.cur.fetchall()
     return rows
 ```
@@ -468,8 +474,9 @@ function fetchProductData(category_id, page = 1, size = 10) {
     .catch((error) => console.error("Error fetching products:", error));
 }
 ```
-By using a category_id and url paramaters (page, size) we can make our backend return 
-different products. Now we are just displaying 3 categories on the products page, so 
+
+By using a category_id and url paramaters (page, size) we can make our backend return
+different products. Now we are just displaying 3 categories on the products page, so
 depending on wich category we click on, an event will be triggered and a different id will be passed
 to make the HTTP call.
 
@@ -479,7 +486,7 @@ Products page:
 
 ### Pagination
 
-When we click on the next or previous button to move to a different page, we will 
+When we click on the next or previous button to move to a different page, we will
 trigger an event that will make an API call with the page we want to go to. e. g. If
 we are currently on the page 1 and we want to go to the next one on the Gameboy category,
 we will use the id of the category and the page number we want to go to to make the API call
