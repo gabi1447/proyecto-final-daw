@@ -1,4 +1,4 @@
-# Proyecto Final 1ºDAW
+# Final Project 1ºDAW
 
 # Table of contents
 - [Day 1](#day-1)
@@ -9,6 +9,13 @@
 - [Day 2](#day-2)
     1. [Postgres and PgAdmin setup](#db)
     2. [Entity Relationship Diagram](#entity-diagram)
+
+- [Day 3](#day-3)
+    1. [Nginx Configuration](#nginx)
+    2. [Cronjob Script](#cronjob)
+    3. [FastApi Backend](#fastapi)
+
+- [Day 4](#day-4)
 
 ## Day 1 <a name="day-1"></a>
 
@@ -91,3 +98,390 @@ Docker compose will help us connect PgAdmin to the PostGreSQL container, because
 
 ## Entity Relationship Diagram <a name="entity-diagram"></a>
 ![db-diagram](./img/entity_relationship_model.png)
+
+## Day 3 <a name="day-3">
+
+## Setting up Nginx Web Server <a name="nginx"></a>
+
+Nginx will be the only container that will have port mapping in the main machine, since
+it will act as the entrypoing of the application and it will be responsible for serving
+the static files of our website. The api calls to the FastApi backend server will be done
+hitting the same url but adding /api at the end of the URL. This way Nginx will redirect the traffic
+to the fastapi container, so it can handle the api call and generate a response for the frontend to consume.
+
+We have containerized our application, so we won't need to install Nginx
+in a machine with a package manager. Instead we have written a Dockerfile
+file in which we will specify:
+
+    - The base image will be using for using Nginx
+    - nginx.conf file
+    - the static files that nginx will serve when a client makes a call to the url
+    on port 80 since at this very moment we have not implemented https and we won't 
+    be serving any content on port 443.
+
+### Dockerfile 
+
+```bash
+# This image will be pulled from Docker Hub
+# and already has Nginx installed
+FROM nginx:stable-alpine3.23
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY static-site/ /usr/share/nginx/html/
+```
+
+With the Dockerfile that is shown above we will pull the Nginx image from 
+Docker Hub(Repository of images) and having this image as our base, we will add
+the necessary files to configure it.
+
+With the **COPY** keyword inside Dockerfile we can copy content from our local file 
+system to the container file system.
+
+### Usage of nginx.conf
+
+In this file we need to specify the content nginx is going to serve when the client
+makes http calls on port 80 to the server serving Nginx. Since nginx is running on a container
+we need to map a port on the machine that is going to run Docker to the container. We can achieve this
+by declaring it on a docker-compose.yaml file. 
+
+Additionaly since Nginx can also work as a proxy we can declare redirections based
+on the path of the URL. For example: Now we have added a redirection to the fastapi container which will take care
+of handling api calls made from the frontend. We could also make a redirection to the container running pgadmin
+everytime the client hits the /admin path.
+
+```bash
+server {
+    listen 80;
+
+    # This is where our static files are stored
+    # In the nginx container
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # This is done to redirect the api calls
+    # made by the client to the fastapi container
+    # running the backend server
+    location /api {
+	proxy_pass http://fastapi:8000;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+## Loading product data from the Ebay API and storing it in PostgreSQL using a Cronjob. <a name="cronjob"></a>
+
+We are going to automate the process of product data retrieval and the storage of
+this data in PostgreSQL with a Cronjob. Cronjobs are used in Linux to run scripts 
+at a specific period of time, in our case, we will specify to run a python script daily
+at midnight. We are doing this to update our catalog of products daily and not show the same
+products everyday. It's also possible that products can be acquired, making the products unavailable 
+to get. So we think a daily refresh of products is a good choice.
+
+We will have a separate container that will be reponsible of running our python script daily.
+We will achieve this by specifying how often will the script run followed by the the command
+it will run at that specific time. In our case it will run daily and it will run the script
+located at /app/cronjob.py. This path is where the script resides INSIDE the container. This is declared
+previously in the Dockerfile:
+
+```bash
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    build-essential \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY cronjob /etc/cron.d/cronjob
+
+RUN chmod 0644 /etc/cron.d/cronjob
+
+RUN touch /var/log/cron.log
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+COPY cronjob.py .
+COPY entrypoint.sh .
+
+RUN chmod +x /app/entrypoint.sh
+
+CMD ["/app/entrypoint.sh"]
+```
+
+With WORKDIR we can establish the current working directory
+and which will be /app in this case and with COPY as said previously
+we can copy files that are located on the machine that's running 
+docker to the container itself.
+
+### Script responsible for data retrieval from the Ebay API and storage in the PostgreSQL database.
+
+Since we are using PostgreSQL as our database we will be using the library **psycopg2** to establish 
+a connection programatically from Python to the database. To retrieve data from the Ebay API we will be using
+the **requests** library. But first, to be able to consume data from the Ebay API we need "credentials" or secrets
+to have access to it. Without an api key or this secrets we won't be able to retrieve any kind of data from Ebay
+at least from their API. This is done this way to implement rate limiting in APIs and limit the usage of it to users.
+
+In Ebay they use a methodology to provide authorization called OAuth, this mechanism works by communicating to an 
+authorization server with the "credentials" generated previously and then this server granting a token with limited time usage to communicate
+with the Ebay API. This token is the one that will be passed in the authorization header of each http call to be able to perform data
+retrieval successfully. Tokens have limited time usage for security measures in case a token gets stolen, damages will only be temporary.
+
+In our cronjob.py script we have two classes, **DbConnection** that will be responsible of establishing a connection to the PostgreSQL database
+programmatically and then **Cronjob** that will be responsible.
+
+For security measures and avoid commiting sensitive data to to GitHub, we'll be using 
+environment variables. We'll define environment variables in our local machine and then 
+they will loaded to the containers that may need them with docker compose. This is done 
+with the standard **os** library of Python.
+
+#### DbConnection:
+
+In this class we load the necessary environment variables
+to connect to the postgres database container. We are using docker compose to define
+all the containers that will be part of our architecture. The advantage of doing this 
+is that we can run our whole application and stop it with just two commands. Another advantage
+of using Docker compose is that the containers that we define on it can communicate easly
+between them since they belong to the same network, that's why when we establish the connection
+to the database with psycopg2.connect we initialize the host argument of the method with "postgres"
+because the cronjob container and the postgres container are in the same network.
+
+```python
+class DbConnection:
+    def __init__(self):
+        load_dotenv()
+        self.user = os.getenv("POSTGRES_USER")
+        self.password = os.getenv("POSTGRES_PASSWORD")
+        self.db = os.getenv("POSTGRES_DB")
+        self.conn = psycopg2.connect(
+            host="postgres",
+            port="5432",
+            dbname=self.db,
+            user=self.user,
+            password=self.password)
+        self.cur = self.conn.cursor()
+```
+
+#### Cronjob
+
+As we have mentioned before, the Cronjob class will be responsible for retrieving product data
+from the Ebay Api and consolidating the data in the PostgreSQL database. For accomplishing this we have
+broken our goal in several steps:
+
+    - Getting the token from the Ebay authorization server to communicate with the API:
+
+```python
+@property
+def token(self):
+    if self._token is None:
+        payload = {
+            "grant_type": "client_credentials",
+            "scope": "https://api.ebay.com/oauth/api_scope"
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        response = requests.post(self.token_url, 
+                                auth=(self.client_id, self.client_secret), 
+                                data=payload, 
+                                headers=headers)
+        self._token = response.json()['access_token']
+        return self._token
+    else:
+        return self._token
+```
+
+    - Using the **requests** library on python to make API calls with Ebay:
+
+With the available endpoints that ebay expose, we are able to search products
+and limit the amount of product details that we want to collect using the 'q' and 'limit'
+url params. As we have mention before we will access the token property and assigned it 
+to the 'Authorization' header in each http call to successfully communicate with the API.
+
+```python
+def get_product_data(self, product):
+    url_params = {'q': product, 'limit': 100}
+    headers = {
+        'Authorization': f'Bearer {self.token}',
+    }
+    response = requests.get(self.api_url, params=url_params, headers=headers)
+    return response.json()
+```
+
+    - Filter out data that is relevant for our application
+
+This endpoint in particular returns several fields per product that are not relevant or useful
+for our application, that's why we will iterate over every product data returned by the endpoint
+and later filter out relevant data and store it in the PostgreSQL database.
+
+For that we will use 2 functions, one for filtering out the data and another one for consolidating
+products data in the database:
+
+Filtering out data from response:
+
+```python
+def filter_product_data(self, product_to_get, category_id):
+    products = self.get_product_data(product_to_get)['itemSummaries']
+    products_to_store = []
+    for product in products:
+        product_data = (
+                product['title'],
+                float(product['price']['value']),
+                product['price']['currency'],
+                product['image']['imageUrl'],
+                product['itemWebUrl'],
+                category_id
+        )
+        products_to_store.append(product_data)
+    return products_to_store
+```
+
+Consolidating data in the database:
+
+This is still customizable and open to changes, since right now we are just
+retrieving data related to the category 'gameboy', but we could modify this functions
+to retrieve products related to other categories to make our application more interesting.
+
+```python
+def insert_products(self):
+    sql = """
+        INSERT INTO products (name, price, currency, image_url, item_link, category_id)
+        VALUES %s;
+    """
+    execute_values(
+        self.db.cur,
+        sql,
+        self.filter_product_data('gameboy', 1)
+    )
+    self.db.conn.commit()
+```
+
+## FastApi Backend Server <a name="fastapi"></a>
+
+We have consolidated in the database product data that's going to be populated 
+and used in our website, but for that like in the Ebay API we need to expose 
+**endpoints** that the frontend will call to retrieve data that will then be used 
+in our website in the form of components or product cards. For example if one of our
+endpoints returns:
+
+```json
+{
+    "product_name": "Gameboy",
+    "price": 200,
+    "currency": "USD",
+    "item_link": "https://example-item.com"
+}
+```
+
+We could use this information to then render a product card with this data.
+
+The main purpose of the FastApi Backend Server is to act as a bridge between the frontend
+client and the PostgreSQL database. We will expose an endpoint in our backend server that will allow our
+frontend to call it by passing a category id in specific and a page and size url params that will later let
+us paginate the products in our frontend.
+
+This is primarely the main endpoint that our frontend client will call to retrieve data from our database
+to consume it. 
+
+```python
+@app.get("/api/products/{category_id}")
+async def products(
+    category_id: int,
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+):
+    offset = (page - 1) * size
+    
+    sql = """
+        SELECT name, price, currency, image_url, item_link
+        FROM products
+        WHERE category_id = %s
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    """
+    db.cur.execute(sql, (category_id, size, offset))
+    
+    rows = db.cur.fetchall()
+    return rows
+```
+
+Once we have a response from the API on the client the responsibility of what to do 
+with that data(render it however we see fit), resides in the client code.
+
+## Day 4 <a name="day-4"></a>
+
+Landing page:
+
+![landing-page](./img/landing-page.png)
+
+We have retrieved product data from the Ebay API, we have consolidated the data in a PostgreSQL database
+and we have exposed endpoints from a Backend Server (FastApi) that will be consumed from the Frontend using
+Vanilla JavaScript.
+
+Once again, since we are using Docker and our Nginx container can communicate with the FastApi container thanks
+to docker compose. With Vanilla JavaScript we'll be making use of event listeners and the fetch function, to trigger
+actions and fetching product data from the API that at the same time will query the database and retrieve the requested data.
+
+Endpoint exposed in the Backend:
+
+```python
+@app.get("/api/products/{category_id}")
+async def products(
+    category_id: int,
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+):
+    offset = (page - 1) * size
+    
+    sql = """
+        SELECT name, price, currency, image_url, item_link
+        FROM products
+        WHERE category_id = %s
+        ORDER BY id
+        LIMIT %s OFFSET %s
+    """
+    db.cur.execute(sql, (category_id, size, offset))
+    
+    rows = db.cur.fetchall()
+    return rows
+```
+
+We will make a GET HTTP call to the Backend the following way:
+
+```js
+function fetchProductData(category_id, page = 1, size = 10) {
+  fetch(
+    `http://localhost:8080/api/products/${category_id}?page=${page}&size=${size}`,
+  )
+    .then((response) => response.json())
+    .then((data) => populateProducts(data))
+    .catch((error) => console.error("Error fetching products:", error));
+}
+```
+By using a category_id and url paramaters (page, size) we can make our backend return 
+different products. Now we are just displaying 3 categories on the products page, so 
+depending on wich category we click on, an event will be triggered and a different id will be passed
+to make the HTTP call.
+
+Products page:
+
+![products-page](./img/products-page.png)
+
+### Pagination
+
+When we click on the next or previous button to move to a different page, we will 
+trigger an event that will make an API call with the page we want to go to. e. g. If
+we are currently on the page 1 and we want to go to the next one on the Gameboy category,
+we will use the id of the category and the page number we want to go to to make the API call
+and retrieve new projects. Pages will have a size of 10, so if we are on page 1 or in page 10,
+we won't be able to go back or go further, it won't be allowed.
